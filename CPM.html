@@ -311,6 +311,7 @@
                         <th>LS</th>
                         <th>LF</th>
                         <th>TF</th>
+                        <th>FF</th>
                         <th>Critical?</th>
                         <th>Action</th>
                     </tr>
@@ -429,7 +430,8 @@
                 ef: 0,
                 ls: 0,
                 lf: 0,
-                tf: 0
+                tf: 0,
+                ff: 0
             };
             
             // Make node draggable
@@ -564,6 +566,7 @@
                     <td><input type="number" value="${node.ls}" data-node="${index}" data-field="ls"></td>
                     <td><input type="number" value="${node.lf}" data-node="${index}" data-field="lf"></td>
                     <td><input type="number" value="${node.tf}" data-node="${index}" data-field="tf"></td>
+                    <td><input type="number" value="${node.ff}" data-node="${index}" data-field="ff"></td>
                     <td><input type="text" value="${node.tf === 0 ? 'Yes' : 'No'}" data-node="${index}" data-field="critical"></td>
                     <td><button onclick="deleteNode(${index})">Delete</button></td>
                 `;
@@ -695,13 +698,27 @@
                     }
                 }
                 
-                // Check successors
+                // Check successors and floats
                 const successors = connections.filter(c => c.from === node).map(c => c.to);
                 if (successors.length > 0) {
                     const minSuccLS = Math.min(...successors.map(s => s.ls));
                     if (node.lf > minSuccLS) {
                         warnings.push(`${node.id}: LF should typically be ${minSuccLS} (min LS of successors)`);
                         row.querySelector('[data-field="lf"]').classList.add('error');
+                        hasError = true;
+                    }
+
+                    const minSuccES = Math.min(...successors.map(s => s.es));
+                    const calculatedFF = minSuccES - node.ef;
+                    if (node.ff !== calculatedFF) {
+                        errors.push(`${node.id}: FF should be ${calculatedFF} (min ES of successors - EF), not ${node.ff}`);
+                        row.querySelector('[data-field="ff"]').classList.add('error');
+                        hasError = true;
+                    }
+                } else {
+                    if (node.ff !== node.tf) {
+                        errors.push(`${node.id}: FF should equal TF (${node.tf}) for end activities, not ${node.ff}`);
+                        row.querySelector('[data-field="ff"]').classList.add('error');
                         hasError = true;
                     }
                 }
