@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPM Node Playground - Manual Entry</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            margin: 10px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .toolbar {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .toolbar button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .toolbar button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .toolbar button.active {
+            background: #ffd700;
+            color: #764ba2;
+        }
+        
+        .toolbar button.check-button {
+            background: #28a745;
+            color: white;
+        }
+        
+        .toolbar button.check-button:hover {
+            background: #218838;
+        }
+        
+        .diagram-area {
+            flex: 1;
+            position: relative;
+            background: #f8f9fa;
+            overflow: auto;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .node {
+            position: absolute;
+            width: 120px;
+            height: 100px;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            cursor: move;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease;
+        }
+        
+        .node:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+        }
+        
+        .node.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        
+        .node.error {
+            border-color: #dc3545;
+            box-shadow: 0 0 20px rgba(220, 53, 69, 0.5);
+        }
+        
+        .node.correct {
+            border-color: #28a745;
+            box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+        }
+        
+        .node-row {
+            display: flex;
+            height: 25px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .node-row:last-child {
+            border-bottom: none;
+        }
+        
+        .node-cell {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            font-size: 11px;
+            border-right: 1px solid #e0e0e0;
+            font-weight: bold;
+        }
+        
+        .node-cell:last-child {
+            border-right: none;
+        }
+        
+        .node-label {
+            background: #f0f0f0;
+            color: #667eea;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        
+        .node-duration {
+            background: #fff3cd;
+            font-size: 13px;
+        }
+        
+        .table-area {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 0 0 15px 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        
+        td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            background: white;
+        }
+        
+        td input {
+            width: 100%;
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: center;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        td input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        td input.error {
+            background: #ffebee;
+            border-color: #dc3545;
+        }
+        
+        td input.correct {
+            background: #e8f5e9;
+            border-color: #28a745;
+        }
+        
+        tr:nth-child(even) td {
+            background: #f8f9fa;
+        }
+        
+        tr:hover td {
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .critical {
+            background: rgba(255, 215, 0, 0.2) !important;
+            font-weight: bold;
+        }
+        
+        .add-row-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .add-row-btn:hover {
+            background: #764ba2;
+        }
+        
+        .feedback {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .feedback.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .feedback.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .feedback.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            display: block;
+        }
+        
+        .instructions {
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 5px;
+            margin: 10px;
+            font-size: 12px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <button id="addNodeBtn">Add Node</button>
+            <button id="connectBtn">Connect Nodes</button>
+            <button id="deleteBtn">Delete Selected</button>
+            <button id="checkWorkBtn" class="check-button">Check My Work</button>
+            <button id="clearBtn">Clear All</button>
+            <span style="color: white; margin-left: auto; font-weight: bold;">CPM Network Diagram - Manual Entry Mode</span>
+        </div>
+        
+        <div class="diagram-area" id="diagramArea">
+            <canvas id="canvas"></canvas>
+            <div class="instructions">
+                Enter values in the table below. Nodes will update automatically. Use "Check My Work" to verify your CPM calculations.
+            </div>
+        </div>
+        
+        <div class="table-area">
+            <table id="activityTable">
+                <thead>
+                    <tr>
+                        <th>Activity</th>
+                        <th>IPA</th>
+                        <th>Duration</th>
+                        <th>ES</th>
+                        <th>EF</th>
+                        <th>LS</th>
+                        <th>LF</th>
+                        <th>TF</th>
+                        <th>Critical?</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+            <button class="add-row-btn" id="addRowBtn">Add Activity</button>
+            <div id="feedback" class="feedback"></div>
+        </div>
+    </div>
+
+    <script>
+        let nodes = [];
+        let connections = [];
+        let selectedNode = null;
+        let connectMode = false;
+        let firstNodeForConnection = null;
+        let nodeIdCounter = 1;
+        
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const diagramArea = document.getElementById('diagramArea');
+        
+        function resizeCanvas() {
+            canvas.width = diagramArea.scrollWidth;
+            canvas.height = diagramArea.scrollHeight;
+            drawConnections();
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        document.getElementById('addNodeBtn').addEventListener('click', () => {
+            addNodeFromButton();
+        });
+        
+        document.getElementById('addRowBtn').addEventListener('click', () => {
+            addNodeFromButton();
+        });
+        
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            connectMode = !connectMode;
+            document.getElementById('connectBtn').classList.toggle('active', connectMode);
+            if (!connectMode) {
+                firstNodeForConnection = null;
+            }
+        });
+        
+        document.getElementById('deleteBtn').addEventListener('click', () => {
+            if (selectedNode) {
+                nodes = nodes.filter(n => n !== selectedNode);
+                connections = connections.filter(c => c.from !== selectedNode && c.to !== selectedNode);
+                diagramArea.removeChild(selectedNode.element);
+                selectedNode = null;
+                drawConnections();
+                updateTableFromNodes();
+            }
+        });
+        
+        document.getElementById('checkWorkBtn').addEventListener('click', checkWork);
+        
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            nodes.forEach(node => {
+                if (node.element.parentNode === diagramArea) {
+                    diagramArea.removeChild(node.element);
+                }
+            });
+            nodes = [];
+            connections = [];
+            selectedNode = null;
+            firstNodeForConnection = null;
+            nodeIdCounter = 1;
+            drawConnections();
+            updateTableFromNodes();
+            document.getElementById('feedback').className = 'feedback';
+            document.getElementById('feedback').textContent = '';
+        });
+        
+        function addNodeFromButton() {
+            const node = createNode();
+            nodes.push(node);
+            diagramArea.appendChild(node.element);
+            updateTableFromNodes();
+        }
+        
+        function createNode() {
+            const nodeElement = document.createElement('div');
+            nodeElement.className = 'node';
+            nodeElement.style.left = '50px';
+            nodeElement.style.top = (50 + nodes.length * 120) + 'px';
+            
+            const nodeId = 'A' + nodeIdCounter++;
+            
+            nodeElement.innerHTML = `
+                <div class="node-row">
+                    <div class="node-cell" data-field="es">0</div>
+                    <div class="node-cell node-label" data-field="label">${nodeId}</div>
+                    <div class="node-cell" data-field="ef">0</div>
+                </div>
+                <div class="node-row">
+                    <div class="node-cell node-duration" data-field="duration">0</div>
+                </div>
+                <div class="node-row">
+                    <div class="node-cell" data-field="ls">0</div>
+                    <div class="node-cell" data-field="tf">0</div>
+                    <div class="node-cell" data-field="lf">0</div>
+                </div>
+            `;
+            
+            const node = {
+                element: nodeElement,
+                id: nodeId,
+                duration: 0,
+                es: 0,
+                ef: 0,
+                ls: 0,
+                lf: 0,
+                tf: 0
+            };
+            
+            // Make node draggable
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            
+            nodeElement.addEventListener('mousedown', (e) => {
+                if (connectMode) {
+                    handleNodeConnection(node);
+                    return;
+                }
+                
+                isDragging = true;
+                dragOffset.x = e.clientX - nodeElement.offsetLeft;
+                dragOffset.y = e.clientY - nodeElement.offsetTop;
+                
+                selectNode(node);
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && node.element === nodeElement) {
+                    nodeElement.style.left = (e.clientX - dragOffset.x) + 'px';
+                    nodeElement.style.top = (e.clientY - dragOffset.y) + 'px';
+                    drawConnections();
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            return node;
+        }
+        
+        function selectNode(node) {
+            nodes.forEach(n => n.element.classList.remove('selected'));
+            node.element.classList.add('selected');
+            selectedNode = node;
+        }
+        
+        function handleNodeConnection(node) {
+            if (!firstNodeForConnection) {
+                firstNodeForConnection = node;
+                selectNode(node);
+            } else if (firstNodeForConnection !== node) {
+                const exists = connections.some(c => 
+                    c.from === firstNodeForConnection && c.to === node
+                );
+                
+                if (!exists) {
+                    connections.push({ from: firstNodeForConnection, to: node });
+                    drawConnections();
+                    updateTableFromNodes();
+                }
+                
+                firstNodeForConnection = null;
+                connectMode = false;
+                document.getElementById('connectBtn').classList.remove('active');
+            }
+        }
+        
+        function drawConnections() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.fillStyle = '#667eea';
+            
+            connections.forEach(conn => {
+                const fromRect = conn.from.element.getBoundingClientRect();
+                const toRect = conn.to.element.getBoundingClientRect();
+                const diagramRect = diagramArea.getBoundingClientRect();
+                
+                const fromCenterX = fromRect.left - diagramRect.left + fromRect.width / 2 + diagramArea.scrollLeft;
+                const fromCenterY = fromRect.top - diagramRect.top + fromRect.height / 2 + diagramArea.scrollTop;
+                const toCenterX = toRect.left - diagramRect.left + toRect.width / 2 + diagramArea.scrollLeft;
+                const toCenterY = toRect.top - diagramRect.top + toRect.height / 2 + diagramArea.scrollTop;
+                
+                const angle = Math.atan2(toCenterY - fromCenterY, toCenterX - fromCenterX);
+                
+                const fromX = fromCenterX + (fromRect.width / 2) * Math.cos(angle);
+                const fromY = fromCenterY + (fromRect.height / 2) * Math.sin(angle);
+                const toX = toCenterX - (toRect.width / 2) * Math.cos(angle);
+                const toY = toCenterY - (toRect.height / 2) * Math.sin(angle);
+                
+                ctx.beginPath();
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+                
+                const headLength = 20;
+                const headAngle = Math.PI / 6;
+                
+                ctx.beginPath();
+                ctx.moveTo(toX, toY);
+                ctx.lineTo(
+                    toX - headLength * Math.cos(angle - headAngle),
+                    toY - headLength * Math.sin(angle - headAngle)
+                );
+                ctx.lineTo(
+                    toX - headLength * Math.cos(angle + headAngle),
+                    toY - headLength * Math.sin(angle + headAngle)
+                );
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 3;
+            });
+        }
+        
+        function updateTableFromNodes() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            nodes.forEach((node, index) => {
+                const row = tbody.insertRow();
+                
+                const predecessors = connections
+                    .filter(c => c.to === node)
+                    .map(c => c.from.id);
+                const ipaString = predecessors.length > 0 ? predecessors.join(', ') : '-';
+                
+                row.innerHTML = `
+                    <td><input type="text" value="${node.id}" data-node="${index}" data-field="id"></td>
+                    <td>${ipaString}</td>
+                    <td><input type="number" value="${node.duration}" data-node="${index}" data-field="duration"></td>
+                    <td><input type="number" value="${node.es}" data-node="${index}" data-field="es"></td>
+                    <td><input type="number" value="${node.ef}" data-node="${index}" data-field="ef"></td>
+                    <td><input type="number" value="${node.ls}" data-node="${index}" data-field="ls"></td>
+                    <td><input type="number" value="${node.lf}" data-node="${index}" data-field="lf"></td>
+                    <td><input type="number" value="${node.tf}" data-node="${index}" data-field="tf"></td>
+                    <td><input type="text" value="${node.tf === 0 ? 'Yes' : 'No'}" data-node="${index}" data-field="critical"></td>
+                    <td><button onclick="deleteNode(${index})">Delete</button></td>
+                `;
+                
+                // Add event listeners for input changes
+                row.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        const nodeIndex = parseInt(e.target.dataset.node);
+                        const field = e.target.dataset.field;
+                        const value = e.target.value;
+                        
+                        if (field === 'id') {
+                            nodes[nodeIndex].id = value;
+                            updateNodeDisplay(nodes[nodeIndex]);
+                        } else if (field === 'critical') {
+                            // Update based on Yes/No input
+                            if (value.toLowerCase() === 'yes') {
+                                nodes[nodeIndex].tf = 0;
+                                row.classList.add('critical');
+                            } else {
+                                row.classList.remove('critical');
+                            }
+                        } else {
+                            nodes[nodeIndex][field] = parseFloat(value) || 0;
+                            updateNodeDisplay(nodes[nodeIndex]);
+                            
+                            // Check if critical
+                            if (nodes[nodeIndex].tf === 0) {
+                                row.classList.add('critical');
+                                row.querySelector('[data-field="critical"]').value = 'Yes';
+                            } else {
+                                row.classList.remove('critical');
+                                row.querySelector('[data-field="critical"]').value = 'No';
+                            }
+                        }
+                        
+                        // Clear error states when editing
+                        e.target.classList.remove('error', 'correct');
+                        nodes[nodeIndex].element.classList.remove('error', 'correct');
+                    });
+                });
+                
+                // Check if critical for initial display
+                if (node.tf === 0) {
+                    row.classList.add('critical');
+                }
+            });
+        }
+        
+        function updateNodeDisplay(node) {
+            const cells = node.element.querySelectorAll('.node-cell');
+            cells.forEach(cell => {
+                const field = cell.dataset.field;
+                if (field === 'label') {
+                    cell.textContent = node.id;
+                } else if (field === 'duration') {
+                    cell.textContent = node.duration;
+                } else if (field === 'es') {
+                    cell.textContent = node.es;
+                } else if (field === 'ef') {
+                    cell.textContent = node.ef;
+                } else if (field === 'ls') {
+                    cell.textContent = node.ls;
+                } else if (field === 'lf') {
+                    cell.textContent = node.lf;
+                } else if (field === 'tf') {
+                    cell.textContent = node.tf;
+                }
+            });
+        }
+        
+        function deleteNode(index) {
+            const node = nodes[index];
+            nodes = nodes.filter((n, i) => i !== index);
+            connections = connections.filter(c => c.from !== node && c.to !== node);
+            diagramArea.removeChild(node.element);
+            drawConnections();
+            updateTableFromNodes();
+        }
+        
+        function checkWork() {
+            const feedback = document.getElementById('feedback');
+            let errors = [];
+            let warnings = [];
+            
+            // Clear previous error states
+            document.querySelectorAll('input').forEach(input => {
+                input.classList.remove('error', 'correct');
+            });
+            nodes.forEach(node => {
+                node.element.classList.remove('error', 'correct');
+            });
+            
+            // Check each node
+            nodes.forEach((node, index) => {
+                let hasError = false;
+                const row = document.querySelector(`input[data-node="${index}"]`).closest('tr');
+                
+                // Check EF = ES + Duration
+                if (node.ef !== node.es + node.duration) {
+                    errors.push(`${node.id}: EF should be ${node.es + node.duration} (ES + Duration), not ${node.ef}`);
+                    row.querySelector('[data-field="ef"]').classList.add('error');
+                    hasError = true;
+                }
+                
+                // Check LS = LF - Duration
+                if (node.ls !== node.lf - node.duration) {
+                    errors.push(`${node.id}: LS should be ${node.lf - node.duration} (LF - Duration), not ${node.ls}`);
+                    row.querySelector('[data-field="ls"]').classList.add('error');
+                    hasError = true;
+                }
+                
+                // Check TF = LF - EF or LS - ES
+                const calculatedTF = node.lf - node.ef;
+                if (node.tf !== calculatedTF) {
+                    errors.push(`${node.id}: TF should be ${calculatedTF} (LF - EF), not ${node.tf}`);
+                    row.querySelector('[data-field="tf"]').classList.add('error');
+                    hasError = true;
+                }
+                
+                // Check predecessors
+                const predecessors = connections.filter(c => c.to === node).map(c => c.from);
+                if (predecessors.length > 0) {
+                    const maxPredEF = Math.max(...predecessors.map(p => p.ef));
+                    if (node.es < maxPredEF) {
+                        errors.push(`${node.id}: ES should be at least ${maxPredEF} (max EF of predecessors)`);
+                        row.querySelector('[data-field="es"]').classList.add('error');
+                        hasError = true;
+                    }
+                }
+                
+                // Check successors
+                const successors = connections.filter(c => c.from === node).map(c => c.to);
+                if (successors.length > 0) {
+                    const minSuccLS = Math.min(...successors.map(s => s.ls));
+                    if (node.lf > minSuccLS) {
+                        warnings.push(`${node.id}: LF should typically be ${minSuccLS} (min LS of successors)`);
+                        row.querySelector('[data-field="lf"]').classList.add('error');
+                        hasError = true;
+                    }
+                }
+                
+                // Update node visual state
+                if (hasError) {
+                    node.element.classList.add('error');
+                } else {
+                    node.element.classList.add('correct');
+                    // Mark correct fields
+                    row.querySelectorAll('input[type="number"]').forEach(input => {
+                        if (!input.classList.contains('error')) {
+                            input.classList.add('correct');
+                        }
+                    });
+                }
+            });
+            
+            // Check for activities with no predecessors (should have ES = 0)
+            nodes.forEach(node => {
+                const hasPredecessors = connections.some(c => c.to === node);
+                if (!hasPredecessors && node.es !== 0) {
+                    warnings.push(`${node.id}: Activities with no predecessors typically start at ES = 0`);
+                }
+            });
+            
+            // Display feedback
+            if (errors.length === 0 && warnings.length === 0) {
+                feedback.className = 'feedback success';
+                feedback.textContent = '✓ Excellent work! All CPM calculations are correct!';
+            } else if (errors.length > 0) {
+                feedback.className = 'feedback error';
+                feedback.innerHTML = '<strong>Errors found:</strong><br>' + errors.join('<br>');
+                if (warnings.length > 0) {
+                    feedback.innerHTML += '<br><br><strong>Warnings:</strong><br>' + warnings.join('<br>');
+                }
+            } else {
+                feedback.className = 'feedback warning';
+                feedback.innerHTML = '<strong>Warnings:</strong><br>' + warnings.join('<br>');
+            }
+        }
+        
+        // Initialize with a sample node
+        addNodeFromButton();
+    </script>
+</body>
+</html>
