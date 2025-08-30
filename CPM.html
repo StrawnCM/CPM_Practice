@@ -71,11 +71,16 @@
         }
         
         .diagram-area {
-            flex: 1;
             position: relative;
             background: #f8f9fa;
             overflow: auto;
             border-bottom: 2px solid #e0e0e0;
+        }
+
+        .divider {
+            height: 5px;
+            background: #e0e0e0;
+            cursor: row-resize;
         }
         
         #canvas {
@@ -158,7 +163,6 @@
         }
         
         .table-area {
-            flex: 1;
             overflow: auto;
             padding: 20px;
             background: white;
@@ -298,8 +302,8 @@
                 Enter values in the table below. Nodes will update automatically. Use "Check My Work" to verify your CPM calculations.
             </div>
         </div>
-        
-        <div class="table-area">
+        <div class="divider" id="divider"></div>
+        <div class="table-area" id="tableArea">
             <table id="activityTable">
                 <thead>
                     <tr>
@@ -331,19 +335,63 @@
         let connectMode = false;
         let firstNodeForConnection = null;
         let nodeIdCounter = 1;
-        
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const diagramArea = document.getElementById('diagramArea');
-        
+        const tableArea = document.getElementById('tableArea');
+        const divider = document.getElementById('divider');
+        const container = document.querySelector('.container');
+
         function resizeCanvas() {
             canvas.width = diagramArea.scrollWidth;
             canvas.height = diagramArea.scrollHeight;
             drawConnections();
         }
-        
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+
+        function setInitialSizes() {
+            const containerHeight = container.getBoundingClientRect().height;
+            const dividerHeight = divider.offsetHeight;
+            const diagramHeight = (containerHeight - dividerHeight) * 2 / 3;
+            const tableHeight = (containerHeight - dividerHeight) / 3;
+            diagramArea.style.height = diagramHeight + 'px';
+            tableArea.style.height = tableHeight + 'px';
+            resizeCanvas();
+        }
+
+        setInitialSizes();
+
+        let isResizing = false;
+        divider.addEventListener('mousedown', () => {
+            isResizing = true;
+            document.body.style.cursor = 'row-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const containerRect = container.getBoundingClientRect();
+            const minHeight = 100;
+            const maxDiagram = containerRect.height - divider.offsetHeight - minHeight;
+            let newDiagramHeight = e.clientY - containerRect.top;
+            if (newDiagramHeight < minHeight) newDiagramHeight = minHeight;
+            if (newDiagramHeight > maxDiagram) newDiagramHeight = maxDiagram;
+            diagramArea.style.height = newDiagramHeight + 'px';
+            tableArea.style.height = (containerRect.height - newDiagramHeight - divider.offsetHeight) + 'px';
+            resizeCanvas();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (!isResizing) {
+                setInitialSizes();
+            }
+        });
         
         document.getElementById('addNodeBtn').addEventListener('click', () => {
             addNodeFromButton();
@@ -401,8 +449,11 @@
         function createNode() {
             const nodeElement = document.createElement('div');
             nodeElement.className = 'node';
-            nodeElement.style.left = '50px';
-            nodeElement.style.top = (50 + nodes.length * 120) + 'px';
+            const index = nodes.length;
+            const column = Math.floor(index / 4);
+            const row = index % 4;
+            nodeElement.style.left = (50 + column * 200) + 'px';
+            nodeElement.style.top = (50 + row * 120) + 'px';
             
             const nodeId = 'A' + nodeIdCounter++;
             
