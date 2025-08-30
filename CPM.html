@@ -28,6 +28,12 @@
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
+
+        .workspace {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
         
         .toolbar {
             padding: 15px;
@@ -74,13 +80,8 @@
             position: relative;
             background: #f8f9fa;
             overflow: auto;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .divider {
-            height: 5px;
-            background: #e0e0e0;
-            cursor: row-resize;
+            flex: 2;
+            border-right: 2px solid #e0e0e0;
         }
         
         #canvas {
@@ -166,31 +167,38 @@
             overflow: auto;
             padding: 20px;
             background: white;
-            border-radius: 0 0 15px 15px;
+            flex: 1;
+            border-left: 2px solid #e0e0e0;
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            font-family: 'Calibri', 'Arial', sans-serif;
+            border: 1px solid #d0d0d0;
         }
-        
+
         th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px;
+            background: #dbe5f1;
+            color: #000;
+            padding: 8px;
             text-align: center;
             font-weight: bold;
             position: sticky;
             top: 0;
             z-index: 5;
+            border: 1px solid #d0d0d0;
         }
-        
+
         td {
-            padding: 8px;
+            padding: 6px;
             text-align: center;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #d0d0d0;
             background: white;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f2f2f2;
         }
         
         td input {
@@ -295,36 +303,37 @@
             <button id="clearBtn">Clear All</button>
             <span style="color: white; margin-left: auto; font-weight: bold;">CPM Network Diagram - Manual Entry Mode</span>
         </div>
-        
-        <div class="diagram-area" id="diagramArea">
-            <canvas id="canvas"></canvas>
-            <div class="instructions">
-                Enter values in the table below. Nodes will update automatically. Use "Check My Work" to verify your CPM calculations.
+
+        <div class="workspace">
+            <div class="diagram-area" id="diagramArea">
+                <canvas id="canvas"></canvas>
+                <div class="instructions">
+                    Enter values in the table to the right. Nodes will update automatically. Use "Check My Work" to verify your CPM calculations.
+                </div>
             </div>
-        </div>
-        <div class="divider" id="divider"></div>
-        <div class="table-area" id="tableArea">
-            <table id="activityTable">
-                <thead>
-                    <tr>
-                        <th>Activity</th>
-                        <th>IPA</th>
-                        <th>Duration</th>
-                        <th>ES</th>
-                        <th>EF</th>
-                        <th>LS</th>
-                        <th>LF</th>
-                        <th>TF</th>
-                        <th>FF</th>
-                        <th>Critical?</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                </tbody>
-            </table>
-            <button class="add-row-btn" id="addRowBtn">Add Activity</button>
-            <div id="feedback" class="feedback"></div>
+            <div class="table-area" id="tableArea">
+                <table id="activityTable">
+                    <thead>
+                        <tr>
+                            <th>Activity</th>
+                            <th>IPA</th>
+                            <th>Duration</th>
+                            <th>ES</th>
+                            <th>EF</th>
+                            <th>LS</th>
+                            <th>LF</th>
+                            <th>TF</th>
+                            <th>FF</th>
+                            <th>Critical?</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+                <button class="add-row-btn" id="addRowBtn">Add Activity</button>
+                <div id="feedback" class="feedback"></div>
+            </div>
         </div>
     </div>
 
@@ -339,9 +348,6 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const diagramArea = document.getElementById('diagramArea');
-        const tableArea = document.getElementById('tableArea');
-        const divider = document.getElementById('divider');
-        const container = document.querySelector('.container');
 
         function resizeCanvas() {
             canvas.width = diagramArea.scrollWidth;
@@ -349,49 +355,8 @@
             drawConnections();
         }
 
-        function setInitialSizes() {
-            const containerHeight = container.getBoundingClientRect().height;
-            const dividerHeight = divider.offsetHeight;
-            const diagramHeight = (containerHeight - dividerHeight) * 2 / 3;
-            const tableHeight = (containerHeight - dividerHeight) / 3;
-            diagramArea.style.height = diagramHeight + 'px';
-            tableArea.style.height = tableHeight + 'px';
-            resizeCanvas();
-        }
-
-        setInitialSizes();
-
-        let isResizing = false;
-        divider.addEventListener('mousedown', () => {
-            isResizing = true;
-            document.body.style.cursor = 'row-resize';
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const containerRect = container.getBoundingClientRect();
-            const minHeight = 100;
-            const maxDiagram = containerRect.height - divider.offsetHeight - minHeight;
-            let newDiagramHeight = e.clientY - containerRect.top;
-            if (newDiagramHeight < minHeight) newDiagramHeight = minHeight;
-            if (newDiagramHeight > maxDiagram) newDiagramHeight = maxDiagram;
-            diagramArea.style.height = newDiagramHeight + 'px';
-            tableArea.style.height = (containerRect.height - newDiagramHeight - divider.offsetHeight) + 'px';
-            resizeCanvas();
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                document.body.style.cursor = 'default';
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            if (!isResizing) {
-                setInitialSizes();
-            }
-        });
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
         
         document.getElementById('addNodeBtn').addEventListener('click', () => {
             addNodeFromButton();
